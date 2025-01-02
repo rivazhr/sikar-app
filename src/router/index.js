@@ -26,27 +26,27 @@ const routes = [
         component: Dashboard,
       },
       {
-        path: '/users',
+        path: 'users',
         name: 'Users',
         component: Users,
       },
       {
-        path: '/reservations',
+        path: 'reservations',
         name: 'Reservations',
         component: Reservations,
       },
       {
-        path: '/vehicles',
+        path: 'vehicles',
         name: 'Vehicles',
         component: Vehicles,
       },
       {
-        path: '/approvals',
+        path: 'approvals',
         name: 'Approvals',
         component: Approvals,
       },
       {
-        path: '/schedule',
+        path: 'schedule',
         name: 'Schedule',
         component: Schedule,
       },
@@ -56,7 +56,7 @@ const routes = [
 ];
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.VITE_BASE_URL),
   routes,
 });
 
