@@ -22,7 +22,7 @@ const router = useRouter();
 
 // Fungsi untuk mengarahkan ke halaman /vehicle
 const goToVehiclePage = () => {
-  router.push('/vehicle'); 
+  router.push(vehicles); 
 };
 </script>
 

@@ -29,7 +29,7 @@ onMounted(fetchUsers);
 </script>
 
 <template>
-  <div class="flex-1">
+  <div class="flex-1 w-full">
     <h2 class="text-2xl font-extrabold text-start text-black pb-5">Users</h2>
     <div class="overflow-x-auto w-full shadow-lg rounded-lg bg-white">
       <table class="w-full table-auto">

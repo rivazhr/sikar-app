@@ -25,7 +25,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex-1">
+  <div class="flex-1 w-full">
     <h2 class="text-2xl font-extrabold text-start text-black pb-5">Vehicles</h2>
     <div v-if="vehiclesError" class="text-red-500">{{ vehiclesError }}</div>
     <div v-else class="overflow-x-auto w-full shadow-lg rounded-lg bg-white">
