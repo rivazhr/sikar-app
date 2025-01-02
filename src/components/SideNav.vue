@@ -3,59 +3,63 @@ import router from '../router'
 import { supabase } from '../supabase'  
 import NavMenu from './NavMenu.vue'  
 
-// Menu items data
+// Data menu utama yang akan ditampilkan
 const menuItems = [
   { icon: '/assets/icon-dashboard.svg', label: 'Dashboard', link: '/' },
   { icon: '/assets/icon-users.svg', label: 'Users', link: '/users' },
   { icon: '/assets/icon-reservations.svg', label: 'Reservations', link: '/reservations' },
+  { icon: '/assets/icon-todo.svg', label: 'To-Do', link: '/todo' },
   { icon: '/assets/icon-reservations.svg', label: 'Approvals', link: '/approvals' },
   { icon: '/assets/icon-vehicles.svg', label: 'Vehicles', link: '/vehicles' },
 ]
 
+// Data menu tambahan yang bisa diakses di bagian "OTHERS"
 const menuOthers = [
   { icon: '/assets/icon-schedule.svg', label: 'Schedule', link: '/schedule' },
-  { icon: '/assets/icon-todo.svg', label: 'To-Do', link: '#todo' },
-  { icon: '/assets/icon-contact.svg', label: 'Contact', link: '#contact' },
+  { icon: '/assets/icon-contact.svg', label: 'Contact', link: '/contact' },
 ]
 
+// Data menu untuk pengaturan dan logout
 const menuOpt = [
   { icon: '/assets/icon-settings.svg', label: 'Settings', link: '#settings' },
 ]
 
+// Menerima properti dari komponen induk
 defineProps({
   logo: String,  
   msg: String, 
-  role: String,
+  role: String, // Menentukan peran pengguna (Admin atau Manager)
 })
 
+// Fungsi untuk logout
 async function signOut() {
   try {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut(); // Melakukan proses logout
     if (error) {
       console.error('Logout error:', error.message);
       return;
     }
-    await router.push('/login'); 
+    await router.push('/login'); // Arahkan pengguna ke halaman login setelah logout
   } catch (err) {
-    console.error('Unexpected error during sign out:', err);
+    console.error('Terjadi kesalahan saat logout:', err);
   }
 }
 </script>
 
 <template>
   <nav class="bg-white menu sm:p-4 w-64 sm:w-fit h-l00vh z-50 flex flex-col items-center">
-    <!-- Logo Section -->
+    <!-- Bagian Logo -->
     <router-link class="flex sm:w-fit justify-center mt-8" :to="{ name: 'Dashboard' }">
       <img src="../assets/logo.svg" alt="Logo" class="hidden sm:block w-full max-w-28" />
       <img src="../assets/logo-shrink.svg" alt="Logo" class="block sm:hidden w-full max-w-[30px]" />
     </router-link>
 
-    <!-- Main Menu -->
+    <!-- Menu Utama -->
     <div class="mt-8 flex-grow sm:w-fit">
-      <!-- Admin sees all menu items -->
+      <!-- Menu untuk Admin, Admin melihat semua menu -->
       <ul v-if="role === 'Admin'">
         <NavMenu 
-          v-for="(item, index) in menuItems.filter(item => item.label !== 'Approvals')" 
+          v-for="(item, index) in menuItems.filter(item => item.label !== 'Approvals' && item.label !== 'To-Do')" 
           :key="index" 
           :label="item.label" 
           :link="item.link" 
@@ -63,10 +67,10 @@ async function signOut() {
         />
       </ul>
 
-      <!-- Manager sees only Reservations menu item -->
+      <!-- Menu untuk Manager, Manager hanya melihat Approvals dan To-Do -->
       <ul v-if="role === 'Manager'">
         <NavMenu 
-          v-for="(item, index) in menuItems.filter(item => item.label === 'Approvals')" 
+          v-for="(item, index) in menuItems.filter(item => item.label === 'Approvals' || item.label === 'To-Do')" 
           :key="index" 
           :label="item.label" 
           :link="item.link" 
@@ -74,10 +78,12 @@ async function signOut() {
         />
       </ul>
       
+      <!-- Menu "OTHERS" hanya untuk Admin -->
       <ul v-if="role === 'Admin'">
-        <div class="relative flex py-5 items-center">
+        <div class="relative flex py-3 items-center">
           <div class="flex-grow border-t border-gray-400"></div>
         </div>
+        <div class="hidden sm:inline text-gray-500 text-xs font-semibold text-start mb-3">OTHERS</div>
         <NavMenu 
           v-for="(item, index) in menuOthers" 
           :key="index" 
@@ -88,13 +94,13 @@ async function signOut() {
       </ul>
     </div>
 
-    <!-- Bottom Menu (Settings & Logout) -->
+    <!-- Menu Bawah (Pengaturan & Logout) -->
     <div class="mt-8 w-full">
       <div class="relative flex py-5 items-center">
         <div class="flex-grow border-t border-gray-400"></div>
       </div>
       
-      <!-- Settings & Logout available for both Admin and Manager -->
+      <!-- Menu Pengaturan & Logout tersedia untuk Admin dan Manager -->
       <ul>
         <NavMenu 
           v-for="(item, index) in menuOpt" 
@@ -104,6 +110,7 @@ async function signOut() {
           :icon="item.icon"
         />
         <li>
+          <!-- Tombol Logout -->
           <button @click="signOut" type="submit" class="logout hover:bg-error p-4 w-full bg-error100 rounded-md px-4 py-3 sm:p-4 flex items-center text-error transition-all font-semibold hover:text-error100">
             <img src="/src/assets/icon-logout.svg" class="me-0 sm:me-2" alt="Logout Icon" />
             <span class="hidden sm:inline">Logout</span>

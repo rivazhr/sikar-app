@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { supabase } from '../supabase';
 import SideNav from '../components/SideNav.vue';
 import NavBar from '../components/NavBar.vue';
+import router from '../router/index';
 
 // Menyimpan data pengguna
 const user = ref(null);

@@ -47,7 +47,7 @@ const fetchVehicles = async () => {
 
 // Filter kendaraan berdasarkan kategori yang dipilih
 const filterVehicles = () => {
-  filteredVehicles.value = vehicles.value.filter(vehicle => vehicle.category === newReservation.value.vehicle_category);
+  filteredVehicles.value = vehicles.value.filter(vehicle => vehicle.category === newReservation.value.vehicle_category && vehicle.status === 'Available');
 };
 
 // Fungsi untuk mengambil data reservasi
