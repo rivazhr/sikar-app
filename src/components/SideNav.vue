@@ -5,21 +5,21 @@ import NavMenu from './NavMenu.vue'
 
 // Menu items data
 const menuItems = [
-  { icon: '../assets/icon-dashboard.svg', label: 'Dashboard', link: '/' },
-  { icon: '../assets/icon-users.svg', label: 'Users', link: '/users' },
-  { icon: '../assets/icon-reservations.svg', label: 'Reservations', link: '/reservations' },
-  { icon: '../assets/icon-reservations.svg', label: 'Approvals', link: '/approvals' },
-  { icon: '../assets/icon-vehicles.svg', label: 'Vehicles', link: '/vehicles' },
+  { icon: '/assets/icon-dashboard.svg', label: 'Dashboard', link: '/' },
+  { icon: '/assets/icon-users.svg', label: 'Users', link: '/users' },
+  { icon: '/assets/icon-reservations.svg', label: 'Reservations', link: '/reservations' },
+  { icon: '/assets/icon-reservations.svg', label: 'Approvals', link: '/approvals' },
+  { icon: '/assets/icon-vehicles.svg', label: 'Vehicles', link: '/vehicles' },
 ]
 
 const menuOthers = [
-  { icon: '../assets/icon-schedule.svg', label: 'Schedule', link: '/schedule' },
-  { icon: '../assets/icon-todo.svg', label: 'To-Do', link: '#todo' },
-  { icon: '../assets/icon-contact.svg', label: 'Contact', link: '#contact' },
+  { icon: '/assets/icon-schedule.svg', label: 'Schedule', link: '/schedule' },
+  { icon: '/assets/icon-todo.svg', label: 'To-Do', link: '#todo' },
+  { icon: '/assets/icon-contact.svg', label: 'Contact', link: '#contact' },
 ]
 
 const menuOpt = [
-  { icon: '../assets/icon-settings.svg', label: 'Settings', link: '#settings' },
+  { icon: '/assets/icon-settings.svg', label: 'Settings', link: '#settings' },
 ]
 
 defineProps({

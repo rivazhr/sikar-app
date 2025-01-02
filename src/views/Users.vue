@@ -24,21 +24,6 @@ const editItem = (item) => {
   console.log('Edit item:', item);
 };
 
-// Fungsi untuk menghapus item
-const deleteItem = async (id) => {
-  const { error } = await supabase
-    .from('users')
-    .delete()
-    .eq('id', id);
-  
-  if (error) {
-    console.error('Error deleting item:', error.message);
-  } else {
-    fetchUsers();
-    console.log('Item deleted successfully');
-  }
-};
-
 // Ambil data saat komponen pertama kali dimuat
 onMounted(fetchUsers);
 </script>
@@ -67,7 +52,6 @@ onMounted(fetchUsers);
             <td class="px-4 py-2 text-sm text-gray-700">{{ item.roles.name }}</td>
             <td class="px-4 py-2 text-sm text-gray-700">
               <button @click="editItem(item)" class="bg-blue-500 hover:bg-blue-700 text-white p-2 px-4">Edit</button>
-              <button @click="deleteItem(item.id)" class="bg-red-500 hover:bg-red-700 ml-2 text-white p-2">Delete</button>
             </td>
           </tr>
         </tbody>

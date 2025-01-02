@@ -10,7 +10,7 @@ const reservationsError = ref(null);
 const showDialog = ref(false);
 const newReservation = ref({
   vehicle_category: '', 
-  vehicle_id: '', // Ganti vehicle menjadi vehicle_id
+  vehicle_id: '', 
   start_date: '',
   end_date: '',
   status: 'Waiting',
@@ -44,7 +44,7 @@ const filterVehicles = () => {
 const fetchReservations = async () => {
   const { data, error } = await supabase
     .from('reservations')
-    .select('id,start_date,end_date,status,fuel_consumption,users(name),vehicles(name, category)') // Ganti vehicles menjadi vehicles(name, category)
+    .select('id,start_date,end_date,status,fuel_consumption,users(name),vehicles(name, category)') 
     .order('start_date');
 
   if (error) {
@@ -59,7 +59,7 @@ const addReservation = async () => {
   const { data, error } = await supabase
     .from('reservations')
     .insert([{
-      vehicle_id: newReservation.value.vehicle_id, // Ganti vehicle menjadi vehicle_id
+      vehicle_id: newReservation.value.vehicle_id, 
       start_date: newReservation.value.start_date,
       end_date: newReservation.value.end_date,
       status: newReservation.value.status,

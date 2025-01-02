@@ -19,7 +19,7 @@ const getUserRole = async () => {
   if (user) {
     const { data, error } = await supabase
       .from('users')
-      .select('roles(name)') // Pastikan hanya mengambil role name
+      .select('roles(name)')
       .eq('id', user.id)
       .single();
 
@@ -27,7 +27,7 @@ const getUserRole = async () => {
       console.error('Error fetching user role:', error.message);
       reservationsError.value = 'Terjadi kesalahan saat mengambil data role.';
     } else {
-      userData.value = data; // Simpan data role user
+      userData.value = data;
     }
   }
 };
@@ -83,7 +83,7 @@ const changeStatus = async (id, status) => {
     console.error('Error changing status:', error.message);
   } else {
     console.log('Status updated successfully');
-    fetchReservations(); // Ambil data reservasi setelah status diubah
+    fetchReservations(); 
   }
 };
 
@@ -98,14 +98,14 @@ const deleteItem = async (id) => {
     console.error('Error deleting item:', error.message);
   } else {
     console.log('Item deleted successfully');
-    fetchReservations(); // Ambil data reservasi setelah item dihapus
+    fetchReservations(); 
   }
 };
 
 // Ambil data user role dan reservasi saat komponen pertama kali dimuat
 onMounted(async () => {
   await getUserRole();
-  fetchReservations(); // Panggil fetchReservations setelah role diambil
+  fetchReservations();
 });
 </script>
 
