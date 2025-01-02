@@ -34,7 +34,7 @@ getUserData();
 
 <template>
   <div v-if="user" class="flex w-full h-screen">
-    <SideNav :role="user.roles.name" logo="src/assets/logo.svg" class="sticky top-0 left-0 h-screen w-fit border-r overflow-y-auto hide-scrollbar border-gray-400" />
+    <SideNav :role="user.roles.name" class="sticky top-0 left-0 h-screen w-fit border-r overflow-y-auto hide-scrollbar border-gray-400" />
     <div class="flex-1 bg-grey overflow-y-auto ml-1/5">
       <NavBar :name="user.name" :role="user.roles.name"/>
       <div class="main-content flex w-full p-10">

@@ -46,7 +46,7 @@ async function signOut() {
   <nav class="bg-white menu sm:p-4 w-64 sm:w-fit h-l00vh z-50 flex flex-col items-center">
     <!-- Logo Section -->
     <router-link class="flex sm:w-fit justify-center mt-8" :to="{ name: 'Dashboard' }">
-      <img :src="logo" alt="Logo" class="hidden sm:block w-full max-w-28" />
+      <img src="../assets/logo.svg" alt="Logo" class="hidden sm:block w-full max-w-28" />
       <img src="../assets/logo-shrink.svg" alt="Logo" class="block sm:hidden w-full max-w-[30px]" />
     </router-link>
 
