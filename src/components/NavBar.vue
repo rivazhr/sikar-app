@@ -18,7 +18,7 @@ defineProps({
         <img src="../assets/hamburger.svg" alt="Hamburger Menu" />
       </a>
       <SearchBar class="text-sm" />
-      <router-link v-if="route.name !== 'Reservations' && route.name !== 'Approvals'" class="bg-primary rounded-full min-w-fit aspect-square sm:aspect-auto w-fit flex items-center p-2 sm:py-2 sm:px-4" :to="{ name: 'Reservations' }">
+      <router-link v-if="role !== 'Manager'" class="bg-primary rounded-full min-w-fit aspect-square sm:aspect-auto w-fit flex items-center p-2 sm:py-2 sm:px-4" :to="{ name: 'Reservations' }">
         <img src="../assets/add.svg" alt="Icon" class="h-fit inline" />
         <p class="md:inline hidden opacity-90 hover:opacity-100 text-white">New Reservations</p>
       </router-link>

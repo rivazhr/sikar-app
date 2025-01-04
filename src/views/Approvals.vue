@@ -61,7 +61,7 @@ const fetchReservations = async () => {
           )
         )
       `)
-      .eq('approver_id', user.id);
+      .or(`approver1.eq.${user.id},approver2.eq.${user.id}`);
 
     if (error) {
       console.error('Error fetching reservations:', error.message);
@@ -110,9 +110,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="flex-1">
-    <h2 class="text-2xl font-extrabold text-start text-black pb-5">Reservations</h2>
-    <div class="overflow-x-auto w-full shadow-lg rounded-lg bg-white">
+  <div class="w-full flex-grow rounded-lg">
+    <h2 class="text-2xl font-extrabold text-start text-black pb-5">Approvals</h2>
+    <div class="shadow-lg flex rounded-lg bg-white overflow-x-auto">
       <table class="w-full table-auto">
         <!-- Tabel Header -->
         <thead class="bg-primary">

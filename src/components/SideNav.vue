@@ -28,18 +28,18 @@ const menuOpt = [
 defineProps({
   logo: String,  
   msg: String, 
-  role: String, // Menentukan peran pengguna (Admin atau Manager)
+  role: String,
 })
 
 // Fungsi untuk logout
 async function signOut() {
   try {
-    const { error } = await supabase.auth.signOut(); // Melakukan proses logout
+    const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('Logout error:', error.message);
       return;
     }
-    await router.push('/login'); // Arahkan pengguna ke halaman login setelah logout
+    await router.push('/login'); 
   } catch (err) {
     console.error('Terjadi kesalahan saat logout:', err);
   }

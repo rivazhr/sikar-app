@@ -8,6 +8,7 @@ import Vehicles from '../views/Vehicles.vue';
 import Approvals from '../views/Approvals.vue';
 import Schedule from '../views/Schedule.vue';
 import Contact from '../views/Contact.vue';
+import Todo from '../views/Todo.vue';
 import { supabase } from '../supabase';
 
 const routes = [
@@ -63,6 +64,12 @@ const routes = [
         component: Contact,
         meta: { requiresAuth: true, roles: ['Admin'] },
       },
+      {
+        path: 'todo',
+        name: 'Todo',
+        component: Todo,
+        meta: { requiresAuth: true, roles: ['Manager'] },
+      },
     ],
     meta: { requiresAuth: true },
   },
@@ -97,7 +104,7 @@ router.beforeEach(async (to, from, next) => {
       // Jika pengguna mencoba akses halaman login
       if (to.path === '/login') {
         if (role === 'Manager') {
-          next({ name: 'Approvals' });
+          next({ name: 'Todo' });
         } else if (role === 'Admin') {
           next('/');
         } else {
@@ -112,7 +119,7 @@ router.beforeEach(async (to, from, next) => {
         if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
           console.warn(`Access denied to ${to.path} for role ${role}`);
           if (role === 'Manager') {
-            next({ name: 'Approvals' });
+            next({ name: 'Todo' });
           } else if (role === 'Admin') {
             next('/');
           } else {
