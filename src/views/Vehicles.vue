@@ -8,7 +8,7 @@ const vehiclesError = ref(null);
 
 // Fungsi untuk mengambil data kendaraan
 const fetchVehicles = async () => {
-  const { data, error } = await supabase.from('vehicles').select();
+  const { data, error } = await supabase.from('vehicles').select('*, companies(name)');
 
   if (error) {
     console.error('Error fetching vehicles:', error.message);
@@ -35,6 +35,7 @@ onMounted(() => {
           <tr>
             <th class="px-4 py-2 text-center text-sm font-semibold text-white">No</th>
             <th class="px-4 py-2 text-center text-sm font-semibold text-white">Name</th>
+            <th class="px-4 py-2 text-center text-sm font-semibold text-white">Company</th>
             <th class="px-4 py-2 text-center text-sm font-semibold text-white">Fuel</th>
             <th class="px-4 py-2 text-center text-sm font-semibold text-white">Type</th>
             <th class="px-4 py-2 text-center text-sm font-semibold text-white">Category</th>
@@ -47,6 +48,7 @@ onMounted(() => {
           <tr v-for="(item, index) in vehicles" :key="item.id">
             <td class="px-4 py-2 text-sm text-gray-700">{{ index + 1 }}</td>
             <td class="px-4 py-2 text-sm text-gray-700">{{ item.name }}</td>
+            <td class="px-4 py-2 text-sm text-gray-700">{{ item.companies.name }}</td>
             <td class="px-4 py-2 text-sm text-gray-700">{{ item.fuel_current }} / {{ item.fuel }} L</td>
             <td class="px-4 py-2 text-sm text-gray-700">{{ item.type }}</td>
             <td class="px-4 py-2 text-sm text-gray-700">{{ item.category }}</td>

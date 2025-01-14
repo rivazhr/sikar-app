@@ -188,10 +188,10 @@ const updateReservation = async (reservation) => {
     await supabase
       .from('approvals')
       .update({
-        approver1: reservation.approver1,
-        approver2: reservation.approver2,
+        approver1: reservation.approval_1,
+        approver2: reservation.approval_2,
       })
-      .eq('id', reservation.id);
+      .eq('reservation_id', reservation.id);
 
     // Update driver data jika driver_id ada
     if (reservation.driver_id) {
@@ -200,7 +200,8 @@ const updateReservation = async (reservation) => {
         .update({
           driver_id: reservation.driver_id,
         })
-        .eq('id', reservation.id);
+        .eq('id', reservation.id)
+        .select();
     }
 
     fetchReservations();
@@ -340,7 +341,7 @@ onMounted(() => {
 
               <td class="px-4 py-2 text-sm text-gray-700">
                 <div v-if="editingId === item.id">
-                  <select v-model="item.approver1" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md">
+                  <select v-model="item.approval_1" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md">
                     <option v-for="approver in approvers" :key="approver.id" :value="approver.id">
                       {{ approver.name }}
                     </option>
@@ -353,7 +354,7 @@ onMounted(() => {
 
               <td class="px-4 py-2 text-sm text-gray-700">
                 <div v-if="editingId === item.id">
-                  <select v-model="item.approver2" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md">
+                  <select v-model="item.approval_2" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md">
                     <option v-for="approver in approvers" :key="approver.id" :value="approver.id">
                       {{ approver.name }}
                     </option>

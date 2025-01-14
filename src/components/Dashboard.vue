@@ -1,32 +1,5 @@
-<template>
-  <!-- Konten Dashboard -->
-  <div class="flex-row w-full justify-start">
-    <h2 class="text-2xl font-extrabold text-start text-black pb-5">Dashboard</h2>
-    <div class="grid grid-cols-3 gap-4">
-      <div class="w-full h-full p-5 bg-white shadow-sm rounded-lg">
-        <Card icon="src/assets/dashboard-users.svg" label="Total User" percentage="8.5%" percentageIcon="/src/assets/dashboard-up.svg" :value="String(userCount)"></Card>
-      </div>
-      <div class="w-full h-full p-5 bg-white shadow-sm rounded-lg">
-        <Card icon="src/assets/dashboard-reservations.svg" label="Total Reservations" percentage="8.5%" percentageIcon="/src/assets/dashboard-up.svg" :value="String(reservationCount)"></Card>
-      </div>
-      <div class="w-full h-full p-5 bg-white shadow-sm rounded-lg">
-        <Card icon="src/assets/dashboard-vehicles.svg" label="Total Rented Vehicles" percentage="8.5%" percentageIcon="/src/assets/dashboard-up.svg" :value="String(vehicleReservedCount)"></Card>
-      </div>
-      <div class="col-span-2 h-fit w-full text-start bg-white shadow-sm rounded-lg p-5 overflow-auto">
-        <h2 class="text-black font-extrabold text-lg">Reservations each Month</h2>
-        <canvas id="reservationsByMonth" class="w-fit p-10"></canvas>
-      </div>
-      <div class="h-fit w-full text-start bg-white shadow-sm rounded-lg p-5 overflow-auto">
-        <h2 class="text-black font-extrabold text-lg">Vehicles Composition</h2>
-        <canvas id="vehicleComposition" class="w-fit p-10"></canvas>
-      </div>
-    </div>
-  </div>
-</template>
 
 <script setup>
-import Menubar from './SideNav.vue' 
-import SearchBar from './SearchBar.vue';
 import { supabase } from '../supabase'
 import Chart from 'chart.js/auto'
 import Card from './Card.vue'
@@ -43,7 +16,8 @@ async function fetchData() {
   // Fetch reservations data
   const { data: reservations, error: reservationsError } = await supabase
     .from('reservations')
-    .select();
+    .select()
+    .order('created_at');
 
   // Fetch vehicles data
   const { data: vehicles, error: vehiclesError } = await supabase
@@ -82,8 +56,11 @@ async function fetchData() {
     .map(([vehicleId, count]) => ({ vehicleId, count }));
 
   companyCounts.value = vehicles.reduce((counts, vehicle) => {
-    const companyKey = vehicle.company_id === 1 ? 'Owned' : 'Other Companies';
-    counts[companyKey] = (counts[companyKey] || 0) + 1;
+    if (vehicle.company_id === 1) {
+      counts['Owned'] = (counts['Owned'] || 0) + 1;
+    } else {
+      counts['Others'] = (counts['Others'] || 0) + 1;
+    }
     return counts;
   }, {});
 
@@ -148,3 +125,29 @@ onMounted(() => {
 });
 
 </script>
+
+<template>
+  <!-- Konten Dashboard -->
+  <div class="flex-row w-full justify-start">
+    <h2 class="text-2xl font-extrabold text-start text-black pb-5">Dashboard</h2>
+    <div class="sm:grid grid-cols-3 gap-4">
+      <div class="w-full h-full p-5 bg-white shadow-sm rounded-lg mb-4">
+        <Card icon="src/assets/dashboard-users.svg" label="Total User" :percentage="8.5" :value="String(userCount)"></Card>
+      </div>
+      <div class="w-full h-full p-5 bg-white shadow-sm rounded-lg mb-4">
+        <Card icon="src/assets/dashboard-reservations.svg" label="Total Reservations" :percentage="-8.5" :value="String(reservationCount)"></Card>
+      </div>
+      <div class="w-full h-full p-5 bg-white shadow-sm rounded-lg mb-4">
+        <Card icon="src/assets/dashboard-vehicles.svg" label="Total Rented Vehicles" :percentage="8.5" :value="String(vehicleReservedCount)"></Card>
+      </div>
+      <div class="sm:col-span-2 mb-4 h-fit w-full text-start bg-white shadow-sm rounded-lg p-5 overflow-auto">
+        <h2 class="text-gray-600">Reservations each Month</h2>
+        <canvas id="reservationsByMonth" class="w-fit sm:p-10"></canvas>
+      </div>
+      <div class="h-fit w-full text-start bg-white shadow-sm rounded-lg p-5 overflow-auto">
+        <h2 class="text-gray-600">Vehicles Composition</h2>
+        <canvas id="vehicleComposition" class="w-fit p-10"></canvas>
+      </div>
+    </div>
+  </div>
+</template>

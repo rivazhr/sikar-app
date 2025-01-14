@@ -3,8 +3,7 @@ defineProps({
   icon: String,
   label: String, 
   value: String,
-  percentage: String, 
-  percentageIcon: String 
+  percentage: Number, 
 })
 </script>
 
@@ -18,10 +17,11 @@ defineProps({
       <img :src="icon" class="hidden lg:inline" alt="">
     </span>
   </div>
-  <div class="text-black text-start hidden lg:flex lg:flex-row">
-    <span class="me-1 gap-1 flex flex-row text-green-600 font-bold">
-      <img :src="percentageIcon" alt="">
-      <p>{{ percentage }}</p>
+  <div class="text-black text-start  lg:flex lg:flex-row">
+    <span class="me-1 gap-1 flex flex-row">
+      <img src="/assets/dashboard-up.svg" alt="up" v-if="percentage>0">
+      <p class="text-green-600 font-bold" v-if="percentage>0">{{ percentage }}%</p>
+      <p class="text-red-600 font-bold" v-else>{{ percentage }}%</p>
     </span>
     <span><p>from Last Month</p></span>
   </div>
