@@ -20,8 +20,8 @@ const iconSrc = computed(() => {
     <router-link 
       :to="link" 
       :class="[ 
-        'hover:bg-primary-100 rounded-md text-sm w-full px-4 py-3 sm:p-4 flex items-center transition-all font-semibold hover:text-black', 
-        isActive ? 'bg-primary hover:bg-primary hover:text-white text-white' : 'text-black' 
+        'rounded-md text-sm w-full px-4 py-3 sm:p-4 flex items-center transition-all font-semibold', 
+        isActive ? 'bg-primary text-white hover:text-white' : 'hover:bg-primary-100 hover:text-black text-black' 
       ]"
     >
       <img :src="iconSrc" class="sm:me-2 me-0 visible h-full" alt="" />
