@@ -40,7 +40,6 @@ onMounted(fetchUsers);
             <th class="px-4 py-2 text-center text-sm font-semibold text-white">Name</th>
             <th class="px-4 py-2 text-center text-sm font-semibold text-white">Role</th>
             <th class="px-4 py-2 text-center text-sm font-semibold text-white">Company</th>
-            <th class="px-4 py-2 text-center text-sm font-semibold text-white">Actions</th>
           </tr>
         </thead>
 
@@ -52,9 +51,6 @@ onMounted(fetchUsers);
             <td class="px-4 py-2 text-sm text-gray-700">{{ item.name }}</td>
             <td class="px-4 py-2 text-sm text-gray-700">{{ item.roles.name }}</td>
             <td class="px-4 py-2 text-sm text-gray-700">{{ item.companies.name }}</td>
-            <td class="px-4 py-2 text-sm text-gray-700">
-              <button @click="editItem(item)" class="bg-blue-500 hover:bg-blue-700 text-white p-2 px-4">Edit</button>
-            </td>
           </tr>
         </tbody>
       </table>

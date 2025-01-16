@@ -5,23 +5,23 @@ import NavMenu from './NavMenu.vue'
 
 // Data menu utama yang akan ditampilkan
 const menuItems = [
-  { icon: '/assets/icon-dashboard.svg', label: 'Dashboard', link: '/' },
-  { icon: '/assets/icon-users.svg', label: 'Users', link: '/users' },
-  { icon: '/assets/icon-reservations.svg', label: 'Reservations', link: '/reservations' },
-  { icon: '/assets/icon-todo.svg', label: 'To-Do', link: '/todo' },
-  { icon: '/assets/icon-reservations.svg', label: 'Approvals', link: '/approvals' },
-  { icon: '/assets/icon-vehicles.svg', label: 'Vehicles', link: '/vehicles' },
+  { icon: '/assets/icon-dashboard', label: 'Dashboard', link: '/' },
+  { icon: '/assets/icon-reservations', label: 'Reservations', link: '/reservations' },
+  { icon: '/assets/icon-todo', label: 'To-Do', link: '/todo' },
+  { icon: '/assets/icon-reservations', label: 'Approvals', link: '/approvals' },
 ]
 
 // Data menu tambahan yang bisa diakses di bagian "OTHERS"
 const menuOthers = [
-  { icon: '/assets/icon-schedule.svg', label: 'Schedule', link: '/schedule' },
-  { icon: '/assets/icon-contact.svg', label: 'Contact', link: '/contact' },
+  { icon: '/assets/icon-users', label: 'Users', link: '/users' },
+  { icon: '/assets/icon-vehicles', label: 'Vehicles', link: '/vehicles' },
+  { icon: '/assets/icon-schedule', label: 'Schedule', link: '/schedule' },
+  { icon: '/assets/icon-contact', label: 'Contact', link: '/contact' },
 ]
 
 // Data menu untuk pengaturan dan logout
 const menuOpt = [
-  { icon: '/assets/icon-settings.svg', label: 'Settings', link: '#settings' },
+  { icon: '/assets/icon-settings', label: 'Settings', link: '#settings' },
 ]
 
 // Menerima properti dari komponen induk
@@ -78,12 +78,12 @@ async function signOut() {
         />
       </ul>
       
-      <!-- Menu "OTHERS" hanya untuk Admin -->
+      <!-- Menu "MANAGEMENTS" hanya untuk Admin -->
       <ul v-if="role === 'Admin'">
         <div class="relative flex py-3 items-center">
           <div class="flex-grow border-t border-gray-400"></div>
         </div>
-        <div class="hidden sm:inline text-gray-500 text-xs font-semibold text-start mb-3">OTHERS</div>
+        <div class="hidden sm:flex text-gray-500 text-xs font-semibold text-start px-4 my-1">MANAGEMENT</div>
         <NavMenu 
           v-for="(item, index) in menuOthers" 
           :key="index" 
@@ -95,11 +95,11 @@ async function signOut() {
     </div>
 
     <!-- Menu Bawah (Pengaturan & Logout) -->
-    <div class="mt-8 w-full">
+    <div class="w-full">
       <div class="relative flex py-5 items-center">
         <div class="flex-grow border-t border-gray-400"></div>
       </div>
-      
+      <div class="hidden sm:flex text-gray-500 text-xs font-semibold text-start px-4 my-1">PREFERENCES</div>
       <!-- Menu Pengaturan & Logout tersedia untuk Admin dan Manager -->
       <ul>
         <NavMenu 
@@ -111,8 +111,9 @@ async function signOut() {
         />
         <li>
           <!-- Tombol Logout -->
-          <button @click="signOut" type="submit" class="logout hover:bg-error p-4 w-full bg-error100 rounded-md px-4 py-3 sm:p-4 flex items-center text-error transition-all font-semibold hover:text-error100">
-            <img src="/src/assets/icon-logout.svg" class="me-0 sm:me-2" alt="Logout Icon" />
+          <button @click="signOut" type="submit" class="logout hover:bg-error hover:text-red-100 p-4 w-full bg-error100 rounded-md px-4 py-3 sm:p-4 flex items-center text-error transition-all font-semibold">
+            <!-- Gambar logout -->
+            <img src="/src/assets/icon-logout.svg" class="logout-icon me-0 sm:me-2" alt="Logout Icon" />
             <span class="hidden sm:inline">Logout</span>
           </button>
         </li>
@@ -122,11 +123,19 @@ async function signOut() {
 </template>
 
 <style scoped>
- .logout{
-    min-width: 50px;
- }
+.logout{
+  min-width: 50px;
+}
 
- .menu {
-  min-width: fit-content;
- }
+.menu {
+min-width: fit-content;
+}
+
+.logout-icon {
+  transition: all 0.3s ease;
+}
+
+.logout:hover .logout-icon {
+  content: url('/src/assets/icon-logout-active.svg');
+}
 </style>

@@ -14,26 +14,33 @@ const exportTableToExcel = () => {
 
 // State untuk menyimpan data reservasi dan error
 const reservations = ref([]);
+const approverList = ref([]);
 const reservationsError = ref(null);
 
 // State untuk menyimpan data untuk dropdown
 const approvers = ref([]);
 const drivers = ref([]);
 
+// State untuk edit data
+const showDetailDialog = ref(false);
+const detailReservation = ref(null);
+const approverLevels = ref();
+const selectedApprovers = ref([]);  
+
 // State untuk track perubahan status form
-const editingId = ref(null);
 const showDialog = ref(false);
 const newReservation = ref({
   vehicle_category: '', 
   vehicle_id: '', 
   start_date: '',
   end_date: '',
-  status: 'Waiting',
-  fuel_consumption: 0,
-  approver1: null,
-  approver2: null,
-  driver_id: null
+  status: 'Select Approvers',
+  fuel_consumption: 0
 });
+
+// State untuk mengubah data
+const isEditing = ref(false);
+const hasApprovers = ref(false);
 
 // State untuk menyimpan daftar kendaraan dan kendaraan yang difilter
 const vehicles = ref([]);
@@ -67,45 +74,14 @@ const fetchReservations = async () => {
       start_date, end_date, status, fuel_consumption,
       vehicles(name),
       user:users!user_id(name),
-      driver:users!driver_id(name)
+      driver:users!driver_id(name),
+      approvals(id, is_approved) 
     `);
 
   if (error) {
     console.error('Error fetching reservations data:', error.message);
   } else {
-    // Menyimpan data reservations yang diambil
-    const reservationsData = data;
-    console.log('Fetched reservations:', reservationsData);
-
-    const { data: approvalsData, error: approvalsError } = await supabase
-      .from('approvals')
-      .select(`
-        id,
-        approver_1:users!approver1(name, id),
-        approver_2:users!approver2(name, id),
-        reservation_id
-      `)
-      .order('reservation_id');
-
-    if (approvalsError) {
-      console.error('Error fetching approvals data:', approvalsError.message);
-    } else {
-      // Menyimpan data approvals yang diambil
-      console.log('Fetched approvals:', approvalsData);
-
-      // Gabungkan data reservations dengan approvals berdasarkan reservation_id
-      const mergedReservations = reservationsData.map(reservation => {
-        const approval = approvalsData.find(approval => approval.reservation_id === reservation.id);
-        return {
-          ...reservation,
-          approval_1: approval?.approver_1,
-          approval_2: approval?.approver_2
-        };
-      });
-
-      // Simpan data yang sudah digabung ke dalam state reservations
-      reservations.value = mergedReservations;
-    }
+    reservations.value = data;
   }
 };
 
@@ -147,7 +123,7 @@ const addReservation = async () => {
         vehicle_id: newReservation.value.vehicle_id,
         start_date: newReservation.value.start_date,
         end_date: newReservation.value.end_date,
-        status: newReservation.value.status,
+        status: 'Select Approvers',
       })
       .select();
 
@@ -155,24 +131,7 @@ const addReservation = async () => {
       console.error('Error inserting reservation:', reservationError.message);
       return;
     }
-
-    // Ambil ID reservasi baru
-    const reservationId = reservationData[0].id;
-
-    // Tambahkan data approval ke tabel approvals
-    const { error: approvalError } = await supabase
-      .from('approvals')
-      .insert({
-        reservation_id: reservationId,
-        approver1: newReservation.value.approver1,
-        approver2: newReservation.value.approver2,
-      });
-
-    if (approvalError) {
-      console.error('Error inserting approval:', approvalError.message);
-      return;
-    }
-
+    
     // Perbarui data tabel
     await fetchReservations();
     showDialog.value = false;
@@ -181,33 +140,85 @@ const addReservation = async () => {
   }
 };
 
-// Update status dan driver pada reservasi
-const updateReservation = async (reservation) => {
-  try {
-    // Update approval data
-    await supabase
-      .from('approvals')
-      .update({
-        approver1: reservation.approval_1,
-        approver2: reservation.approval_2,
-      })
-      .eq('reservation_id', reservation.id);
+const fetchApprovers = async (itemId) => {
+  const { data, error } = await supabase
+    .from('approvals')
+    .select('users(name), level, is_approved')
+    .eq('reservation_id', itemId)
+    .order('level');
 
-    // Update driver data jika driver_id ada
-    if (reservation.driver_id) {
-      await supabase
-        .from('reservations')
-        .update({
-          driver_id: reservation.driver_id,
-        })
-        .eq('id', reservation.id)
-        .select();
+  if (!error) {
+    approverList.value = data;
+  } 
+};
+
+// Handle opening detail dialog
+const openDetailDialog = async (reservation) => {
+  detailReservation.value = { ...reservation };
+  selectedApprovers.value = []; 
+  isEditing.value = false;
+  
+  // Ambil data approver dan perbarui hasApprovers
+  await fetchApprovers(reservation.id);
+  hasApprovers.value = approverList.value.length > 0;
+  approverLevels.value = approverList.value.length;
+  showDetailDialog.value = true;
+};
+
+// Watch for changes in approverLevels to update selectedApprovers
+watch(approverLevels, (newVal) => {
+  const diff = newVal - selectedApprovers.value.length;
+  if (diff > 0) {
+    selectedApprovers.value.push(...Array(diff).fill(null));
+  } else if (diff < 0) {
+    selectedApprovers.value.splice(diff);
+  }
+});
+
+// Save the updated approvers and insert approvals
+const saveEditedReservation = async () => {
+  if (!detailReservation.value) return;
+
+  // Validasi jumlah approver di antara 2 dan 5
+  if (approverLevels.value < 2 || approverLevels.value > 5) {
+    alert("Approver levels must be between 2 and 5");
+    return; 
+  }
+
+  // Validasi untuk memastikan bahwa semua approvers yang dipilih tidak kosong
+  if (selectedApprovers.value.some(approver => approver === null || approver === undefined)) {
+    alert("Please select approvers for all levels.");
+    return; 
+  }
+
+  try {
+    // Update vehicle ID
+    await supabase
+      .from('reservations')
+      .update({
+        start_date: detailReservation.value.start_date,
+        end_date: detailReservation.value.end_date,
+        status: 'Waiting for Approvals'
+      })
+      .eq('id', detailReservation.value.id)
+
+    // Update approvers
+    for (let i = 0; i < approverLevels.value; i++) {
+      const approverId = selectedApprovers.value[i];
+      if (approverId) {
+        await supabase.from('approvals').insert({
+          reservation_id: detailReservation.value.id,
+          level: i + 1,
+          approver_id: approverId,
+        });
+      }
     }
 
-    fetchReservations();
-    editingId.value = null;
+    // Refresh data and close dialog
+    await fetchReservations();
+    showDetailDialog.value = false;
   } catch (error) {
-    console.error('Error updating reservation:', error.message);
+    console.error('Error saving edited reservation:', error);
   }
 };
 
@@ -219,7 +230,7 @@ const deleteItem = async (reservationId) => {
       .delete()
       .eq('id', reservationId);
     console.log('Reservation deleted successfully');
-    fetchReservations(); // Refresh data setelah menghapus
+    fetchReservations();
   } catch (error) {
     console.error('Error deleting reservation:', error.message);
   }
@@ -244,7 +255,7 @@ onMounted(() => {
         <img src="../assets/add.svg" class="inline md:hidden" alt="">
         <p class="text-white font-semibold hidden md:inline">Add Reservation</p>
       </button>
-      <button @click="exportTableToExcel" class="md:bg-green-500 bg-transparent opacity-90 hover:opacity-100 md:py-2 md:px-4 p-2 rounded mb-4">
+      <button v-if="reservations" @click="exportTableToExcel" class="md:bg-green-500 bg-transparent opacity-90 hover:opacity-100 md:py-2 md:px-4 p-2 rounded mb-4">
         <img src="../assets/icon-excel.svg" class="max-w-7 inline md:hidden" alt=""/>
         <p class="text-white font-semibold hidden md:inline">Export to Excel</p>
       </button>
@@ -297,8 +308,97 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Tabel dengan scroll hanya untuk tabel -->
-    <div class="w-full overflow-x-auto flex-grow rounded-lg">
+    <!-- Detail Dialog -->
+    <div v-if="showDetailDialog" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50">
+      <div class="bg-white rounded-lg shadow-lg p-6 w-4/5 min-h-fit h-3/4 sm:w-2/5 text-start text-black">
+        <h2 class="text-xl font-bold mb-4 text-black text-center">Reservation Details</h2>
+        
+        <!-- Scrollable Content -->
+        <div class="overflow-y-scroll max-h-[70%] p-5">
+          <!-- User -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">User</label>
+            <p class="mt-1 p-2 w-full bg-gray-100 text-black border-gray-300 rounded-md">{{ detailReservation?.user?.name || 'N/A' }}</p>
+          </div>
+          
+          <!-- Vehicle -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">Vehicle</label>
+            <p class="mt-1 p-2 w-full bg-gray-100 text-black border-gray-300 rounded-md">{{ detailReservation?.vehicles?.name || 'N/A' }}</p>
+          </div>
+
+          <!-- Start Date -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">Start Date</label>
+            <input v-if="isEditing" v-model="detailReservation.start_date" type="date" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" />
+            <p v-else class="mt-1 p-2 w-full bg-gray-100 text-black border-gray-300 rounded-md">{{ detailReservation?.start_date }}</p>
+          </div>
+
+          <!-- End Date -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">End Date</label>
+            <input v-if="isEditing" v-model="detailReservation.end_date" type="date" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" />
+            <p v-else class="mt-1 p-2 w-full bg-gray-100 text-black border-gray-300 rounded-md">{{ detailReservation?.end_date }}</p>
+          </div>
+          
+          <!-- Approver Levels -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">Number of Approver Levels</label>
+            <input 
+              v-if="isEditing" 
+              v-model.number="approverLevels" 
+              type="number" 
+              min="2" 
+              max="5"
+              class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" 
+            />
+            <p v-else class="mt-1 p-2 w-full bg-gray-100 text-black border-gray-300 rounded-md">{{ approverLevels }}</p>
+          </div>
+          
+          <!-- Approvers -->
+          <!-- Tampilkan nama approver jika tidak sedang edit -->
+          <div v-if="!isEditing" v-for="(approver, index) in approverList" :key="index" class="mb-4">
+            <label :for="'approver-' + approver.level" class="text-sm font-medium flex flex-row items-center mb-2 text-gray-700">
+              <div class="w-fit me-3">Approver {{ approver.level }}</div>
+              <div>
+                <p v-if="approver.is_approved === null" class="w-full p-1 px-3 text-xs bg-gray-200 text-black border-gray-300 rounded-full">{{ 'Waiting for Approvals' }}</p>
+                <p v-else-if="approver.is_approved === true" class="w-full p-1 px-3 text-xs bg-green-200 text-green-600 border-gray-300 rounded-full">{{ 'Approved' }}</p>
+                <p v-else class="w-full p-1 px-3 text-xs bg-red-200 text-red-600 border-gray-300 rounded-full">{{ 'Declined' }}</p>
+              </div>
+            </label>
+            <p class="mt-1 me-3 p-2 w-full bg-gray-100 text-black border-gray-300 rounded-md">{{ approver.users.name || 'Not Assigned' }}</p>
+          </div>
+          <!-- Tampilkan dropdown saat edit -->
+          <div v-else v-for="(level, index) in approverLevels" :key="'approver-level-' + index" class="mb-4">
+            <label :for="'approver-' + (index + 1)" class="text-sm font-medium text-gray-700">
+              Approver {{ level }}
+            </label>
+            <select
+              v-model="selectedApprovers[index]"
+              :id="'approver-' + (index + 1)"
+              class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md"
+            required>
+              <option :value="null">Select Approver</option>
+              <option v-for="approver in approvers" :key="approver.id" :value="approver.id">
+                {{ approver.name }}
+              </option>
+            </select>
+          </div>
+
+        </div>
+        
+        <!-- Actions -->
+        <div class="flex justify-end mt-4">
+          <button v-if="hasApprovers" class="hidden"></button>
+          <button v-else-if="isEditing" @click="saveEditedReservation" class="bg-green-600 hover:bg-green-800 text-white me-2 py-2 px-4 rounded">Save</button>
+          <button v-else @click="isEditing = true" class="bg-primary opacity-90 hover:opacity-100 text-white me-2 py-2 px-4 rounded">Select Approvers</button>
+          <button @click="showDetailDialog = false" class="bg-gray-200 hover:bg-gray-300 text-gray-500 py-2 px-4 rounded">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabel reservasi -->
+    <div class="w-full overflow-x-auto flex-grow rounded-lg" v-if="reservations">
       <div class="shadow-lg flex rounded-lg bg-white">
         <table class="w-fit table-auto flex-grow" id="reservationsTable">
           <!-- Tabel Header -->
@@ -310,8 +410,6 @@ onMounted(() => {
               <th class="px-4 py-2 text-center text-sm font-semibold text-white">Start Date</th>
               <th class="px-4 py-2 text-center text-sm font-semibold text-white">End Date</th>
               <th class="px-4 py-2 text-center text-sm font-semibold text-white">Status</th>
-              <th class="px-4 py-2 text-center text-sm font-semibold text-white">Approver 1</th>
-              <th class="px-4 py-2 text-center text-sm font-semibold text-white">Approver 2</th>
               <th class="px-4 py-2 text-center text-sm font-semibold text-white">Driver</th>
               <th class="px-4 py-2 text-center text-sm font-semibold text-white">Actions</th>
             </tr>
@@ -337,52 +435,17 @@ onMounted(() => {
               <!-- Status -->
               <td class="px-4 py-2 text-sm bg-green-500 text-white" v-if="item.status === 'Approved'">{{ item.status }}</td>
               <td class="px-4 py-2 text-sm bg-error100 text-error" v-else-if="item.status === 'Declined'">{{ item.status }}</td>
-              <td class="px-4 py-2 text-sm bg-gray-200 text-black" v-else="item.status === 'Waiting'">{{ item.status }}</td>
-
-              <td class="px-4 py-2 text-sm text-gray-700">
-                <div v-if="editingId === item.id">
-                  <select v-model="item.approval_1" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md">
-                    <option v-for="approver in approvers" :key="approver.id" :value="approver.id">
-                      {{ approver.name }}
-                    </option>
-                  </select>
-                </div>
-                <div v-else>
-                  {{ item.approval_1?.name || 'N/A' }}
-                </div>
-              </td>
-
-              <td class="px-4 py-2 text-sm text-gray-700">
-                <div v-if="editingId === item.id">
-                  <select v-model="item.approval_2" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md">
-                    <option v-for="approver in approvers" :key="approver.id" :value="approver.id">
-                      {{ approver.name }}
-                    </option>
-                  </select>
-                </div>
-                <div v-else>
-                  {{ item.approval_2?.name || 'N/A' }}
-                </div>
-              </td>
-
-              <td class="px-4 py-2 text-sm text-gray-700">
-                <div v-if="editingId === item.id && item.is_approved1 && item.is_approved2">
-                  <select v-model="item.driver_id" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md">
-                    <option v-for="driver in drivers" :key="driver.id" :value="driver.id">
-                      {{ driver.name }}
-                    </option>
-                  </select>
-                </div>
-                <div v-else>
-                  {{ item.driver?.name || 'Not Assigned' }}
-                </div>
-              </td>
+              <td class="px-4 py-2 text-sm bg-gray-200 text-black" v-else-if="item.status === 'Waiting for Approvals'">{{ item.status }}</td>
+              <td class="px-4 py-2 text-sm bg-blue-200 text-black" v-else>{{ item.status }}</td>
+              
+              <!-- Driver -->
+              <td v-if="item.driver" class="px-4 py-2 text-sm text-gray-700">{{ item.driver.name }}</td>
+              <td v-else-if="item.status === 'Approved'" class="px-4 py-2 text-sm bg-blue-200 text-black">Select Driver</td>
+              <td v-else class="px-4 py-2 text-sm text-gray-700">Not Assigned</td>
 
               <!-- Actions -->
-              <td class="px-4 py-2 text-sm text-gray-700 flex">
-                <button @click="editingId === item.id ? updateReservation(item) : editingId = item.id" class="bg-blue-500 m-1 hover:bg-blue-700 text-white p-2 px-4">
-                  {{ editingId === item.id ? 'Save' : 'Edit' }}
-                </button>
+              <td class="px-4 py-2 text-sm text-gray-700 flex justify-center">
+                <button @click="openDetailDialog(item)" class="bg-blue-500 m-1 hover:bg-blue-700 text-white p-2 px-4">Detail</button>
                 <button @click="deleteItem(item.id)" class="bg-red-500 m-1 hover:bg-red-700 text-white p-2 px-4">Delete</button>
               </td>
             </tr>
@@ -390,7 +453,8 @@ onMounted(() => {
         </table>
       </div>
     </div>
-
-    <p v-if="reservationsError" class="text-red-500 mt-4">{{ reservationsError }}</p>
+    <div class="w-full flex-grow text-gray-600 my-auto" v-else>
+      <p>No reservations found</p>
+    </div>
   </div>
 </template>

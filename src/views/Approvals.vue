@@ -5,7 +5,7 @@ import { supabase } from '../supabase';
 // State untuk menyimpan data
 const reservations = ref([]);
 const reservationsError = ref(null);
-const userData = ref(null);
+const userData = ref();
 
 // Ambil data user dan role
 const getUserRole = async () => {
@@ -30,7 +30,7 @@ const getUserRole = async () => {
 };
 
 // Ambil data reservasi dan approval
-const fetchReservations = async () => {
+const fetchApprovers = async () => {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError) throw userError;
@@ -40,82 +40,92 @@ const fetchReservations = async () => {
         .from('approvals')
         .select(`
           id,
+          is_approved,
           reservation_id,
-          approver_1:users!approver1(name),
-          approver_2:users!approver2(name)
+          reservations(
+            id,
+            start_date,
+            end_date,
+            fuel_consumption,
+            user:users!user_id(name),
+            vehicles(name, category)
+          )
         `)
-        .or(`approver1.eq.${user.id},approver2.eq.${user.id}`);
+        .or(`approver_id.eq.${user.id}`)
+        .order('created_at');
 
       if (approvalsError) throw approvalsError;
 
-      const { data: reservationsData, error: reservationsError } = await supabase
-        .from('reservations')
-        .select(`
-          id,
-          start_date,
-          end_date,
-          status,
-          fuel_consumption,
-          user:users!user_id(name),
-          vehicles(name, category)
-        `);
-        
-      if (reservationsError) throw reservationsError;
-
-      // Gabungkan data approvals dan reservations
-      reservations.value = (reservationsData || []).map(reservation => {
-        const approval = (approvalsData || []).find(a => a.reservation_id === reservation.id);
-        return {
-          ...reservation,
-          approval_1: approval?.approver_1 || null,
-          approval_2: approval?.approver_2 || null,
-        };
-      });
+      // Map data approvals untuk memasukkan status berdasarkan is_approved
+      reservations.value = approvalsData.map(approval => ({
+        ...approval.reservations,
+        approvalId: approval.id,
+        status: approval.is_approved === null
+          ? 'Waiting'
+          : approval.is_approved
+          ? 'Approved'
+          : 'Declined',
+      }));
     }
   } catch (error) {
-    console.error('Error fetching reservations:', error.message);
-    reservationsError.value = 'Terjadi kesalahan saat mengambil data reservasi.';
+    console.error('Error fetching approvals:', error.message);
+    reservationsError.value = 'Terjadi kesalahan saat mengambil data approvals.';
   }
 };
 
-// Fungsi untuk mengubah status reservasi
-const changeStatus = async (id, status) => {
+// Fungsi untuk memperbarui status reservations berdasarkan approvals
+const updateReservationStatus = async (reservationId) => {
   try {
-    const { error } = await supabase
-      .from('reservations')
-      .update({ status })
-      .eq('id', id);
+    const { data: approvals, error: approvalError } = await supabase
+      .from('approvals')
+      .select('is_approved')
+      .eq('reservation_id', reservationId);
 
+    if (approvalError) throw approvalError;
+
+    if (approvals.every(approval => approval.is_approved === true)) {
+      // Semua approval adalah true
+      await supabase
+        .from('reservations')
+        .update({ status: 'Approved' })
+        .eq('id', reservationId);
+    } else if (approvals.some(approval => approval.is_approved === false)) {
+      // Salah satu approval adalah false
+      await supabase
+        .from('reservations')
+        .update({ status: 'Declined' })
+        .eq('id', reservationId);
+    }
+  } catch (error) {
+    console.error('Error updating reservation status:', error.message);
+  }
+};
+
+// Fungsi untuk mengubah status approval
+const changeStatus = async (reservationId, is_approved) => {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+
+    const { error } = await supabase
+      .from('approvals')
+      .update({ is_approved })
+      .eq('reservation_id', reservationId)
+      .eq('approver_id', user.id);
     if (error) throw error;
 
-    console.log('Status updated successfully');
-    fetchReservations();
+    console.log('Approval status updated successfully');
+    await updateReservationStatus(reservationId); 
+    fetchApprovers(); 
   } catch (error) {
     console.error('Error changing status:', error.message);
-  }
-};
-
-// Fungsi untuk menghapus item
-const deleteItem = async (id) => {
-  try {
-    const { error } = await supabase
-      .from('reservations')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-
-    console.log('Item deleted successfully');
-    fetchReservations();
-  } catch (error) {
-    console.error('Error deleting item:', error.message);
   }
 };
 
 // Inisialisasi saat komponen dimuat
 onMounted(async () => {
   await getUserRole();
-  fetchReservations();
+  fetchApprovers();
 });
 </script>
 
@@ -150,25 +160,21 @@ onMounted(async () => {
             <td class="px-4 py-2 text-sm" :class="{
               'bg-green-500 text-white': item.status === 'Approved',
               'bg-red-500 text-white': item.status === 'Declined',
+              'text-black': item.status === 'Waiting',
             }">
               {{ item.status }}
             </td>
             <td class="px-4 py-2 text-sm text-gray-700">{{ item.fuel_consumption }}L</td>
             <td class="px-4 py-2 text-sm text-gray-700 flex-col">
               <button v-if="userData?.roles?.name === 'Manager' && item.status === 'Waiting'" 
-                @click="changeStatus(item.id, 'Approved')" 
+                @click="changeStatus(item.id, true)" 
                 class="bg-green-500 m-1 hover:bg-green-700 text-white p-2 px-4">
                 Approve
               </button>
               <button v-if="userData?.roles?.name === 'Manager' && item.status === 'Waiting'" 
-                @click="changeStatus(item.id, 'Declined')" 
+                @click="changeStatus(item.id, false)" 
                 class="bg-red-500 m-1 hover:bg-red-700 text-white p-2 px-4">
                 Decline
-              </button>
-              <button v-if="userData?.roles?.name === 'Admin'" 
-                @click="deleteItem(item.id)" 
-                class="bg-red-500 m-1 hover:bg-red-700 text-white p-2 px-4">
-                Delete
               </button>
             </td>
           </tr>

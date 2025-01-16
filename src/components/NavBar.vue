@@ -14,11 +14,11 @@ defineProps({
   <nav class="sticky top-0 w-full bg-white p-6 shadow-sm flex items-center justify-between z-10">
     <!-- Kiri: Hamburger & SearchBar -->
     <div class="flex items-center space-x-4">
-      <a @click="" href="">
+      <a @click="" href="#">
         <img src="../assets/hamburger.svg" alt="Hamburger Menu" />
       </a>
       <SearchBar class="text-sm" />
-      <router-link v-if="role !== 'Manager'" class="bg-primary rounded-full min-w-fit aspect-square sm:aspect-auto w-fit flex items-center p-2 sm:py-2 sm:px-4" :to="{ name: 'Reservations' }">
+      <router-link v-if="role !== 'Manager' && route.name !== 'Reservations'" class="bg-primary rounded-full min-w-fit aspect-square sm:aspect-auto w-fit flex items-center p-2 sm:py-2 sm:px-4" :to="{ name: 'Reservations' }">
         <img src="../assets/add.svg" alt="Icon" class="h-fit inline" />
         <p class="md:inline hidden opacity-90 hover:opacity-100 text-white">New Reservations</p>
       </router-link>
@@ -26,7 +26,7 @@ defineProps({
 
     <!-- Kanan: Profile -->
     <div class="flex items-center space-x-4">
-      <a @click="" class="ps-4 inline-flex items-center" href="">
+      <a @click="" class="ps-4 inline-flex items-center" href="#">
         <img src="../assets/photo-user.svg" class="h-full" alt="Photo" />
         <span class="ms-3 hidden lg:inline flex-row text-start text-black text-sm px-2">
           <h6 id="name" class="font-bold">{{ name }}</h6>
