@@ -473,12 +473,12 @@ onMounted(() => {
 
     <!-- Select Approvers Dialog -->
     <div v-if="showSelectApproversDialog" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50">
-      <div class="bg-white min-h-fit max-h-[70%] rounded-lg shadow-lg p-6 w-4/5 sm:w-2/5 text-start text-black flex flex-col">
+      <div class="bg-white h-fit max-h-[70%] rounded-lg shadow-lg p-6 w-4/5 sm:w-2/5 text-start text-black flex flex-col">
         <!-- Title -->
         <h2 class="text-xl font-bold mb-4 text-black text-center">Select Approvers</h2>
         
         <!-- Scrollable Content -->
-        <div class="flex-grow overflow-y-auto p-5">
+        <div class="flex-shrink overflow-y-auto p-5">
           <!-- Approver Levels -->
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700">Number of Approver Levels</label>
