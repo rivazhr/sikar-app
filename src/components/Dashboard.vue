@@ -4,13 +4,13 @@
     <h2 class="text-2xl font-extrabold text-start text-black pb-5">Dashboard</h2>
     <div class="lg:grid grid-cols-3 gap-4">
       <div class="w-full h-full p-5 bg-white shadow-sm rounded-lg mb-4">
-        <Card label="Users" :percentage="Number(userPercentage.toFixed(2))" :value="String(userCount)"></Card>
+        <Card label="Users" :percentage="Number(userPercentage.toFixed(2))" :value="String(newUserCount)"></Card>
       </div>
       <div class="w-full h-full p-5 bg-white shadow-sm rounded-lg mb-4">
-        <Card label="Reservations" :percentage="Number(reservationPercentage.toFixed(2))" :value="String(reservationCount)"></Card>
+        <Card label="Reservations" :percentage="Number(reservationPercentage.toFixed(2))" :value="String(newReservationCount)"></Card>
       </div>
       <div class="w-full h-full p-5 bg-white shadow-sm rounded-lg mb-4">
-        <Card label="Reserved Vehicles" :percentage="Number(vehiclePercentage.toFixed(2))" :value="String(vehicleReservedCount)"></Card>
+        <Card label="Reserved Vehicles" :percentage="Number(vehiclePercentage.toFixed(2))" :value="String(newVehicleCount)"></Card>
       </div>
       <div class="sm:col-span-2 mb-4 lg:mb-0 h-fit w-full text-start bg-white shadow-sm rounded-lg p-5 overflow-auto">
         <h2 class="text-gray-600">Reservations each Month</h2>
@@ -63,9 +63,9 @@ import Card from './Card.vue';
 import DataTable from 'datatables.net-dt';
 import 'datatables.net-responsive-dt';
 import { onMounted, ref, nextTick } from 'vue';
-// import 'datatables.net-dt/css/dataTables.dataTables.css';
 
 const userCount = ref();
+const userNewCount = ref();
 const reservationCount = ref();
 const vehicleReservedCount = ref();
 const topVehicles = ref([]);
@@ -116,6 +116,12 @@ const userPercentage = ref(0);
 const reservationPercentage = ref(0);
 const vehiclePercentage = ref(0);
 
+// State jumlah bulan ini
+const newUserCount = ref(0);
+const newReservationCount = ref(0);
+const newVehicleCount = ref(0);
+
+// Method untuk menghitung persentase
 const calculatePercentageChange = (current, previous) => {
   if (previous === 0) return current * 100; 
   return ((current - previous) / previous) * 100;
@@ -127,20 +133,23 @@ const fetchDashboardData = async () => {
     const { data: userCounts, error: userError } = await supabase.rpc('get_user_counts_by_month');
     if (userError) throw userError;
 
-    if (userCounts.length > 1) {
-      const [currentMonth, lastMonth] = userCounts.slice(0, 2); 
+    if (userCounts.length > 0) {
+      let [currentMonth, lastMonth] = userCounts.slice(0, 2); 
+      if(!lastMonth) lastMonth = 0;
+      newUserCount.value = currentMonth.user_count;
       userPercentage.value = calculatePercentageChange(
         currentMonth.user_count,
-        lastMonth.user_count
+        lastMonth
       );
     }
-
+    
     // Fetch Reservation Data
     const { data: reservationCounts, error: reservationError } = await supabase.rpc('get_reservation_counts_by_month');
     if (reservationError) throw reservationError;
-
-    if (reservationCounts.length > 1) {
+    
+    if (reservationCounts.length > 0) {
       const [currentMonth, lastMonth] = reservationCounts.slice(0, 2);
+      newReservationCount.value = currentMonth.reservation_count;
       reservationPercentage.value = calculatePercentageChange(
         currentMonth.reservation_count,
         lastMonth.reservation_count
@@ -151,9 +160,9 @@ const fetchDashboardData = async () => {
     const { data: vehicleCounts, error: vehicleError } = await supabase.rpc('get_company_vehicle_count');
     if (vehicleError) throw vehicleError;
 
-    if (vehicleCounts.length > 1) {
+    if (vehicleCounts.length > 0) {
       const [currentMonth, lastMonth] = vehicleCounts.slice(0, 2);
-      vehicleReservedCount.value = currentMonth.vehicle_count;
+      newVehicleCount.value = currentMonth.vehicle_count;
       vehiclePercentage.value = calculatePercentageChange(
         currentMonth.vehicle_count,
         lastMonth.vehicle_count

@@ -109,6 +109,14 @@ const fetchUsersForDrivers = async () => {
 };
 
 const addReservation = async () => {
+  // Validasi
+  if (!newReservation.value.vehicle_category || 
+      !newReservation.value.vehicle_id || 
+      !newReservation.value.start_date || 
+      !newReservation.value.end_date) {
+    return;
+  }
+
   try {
     // Tambahkan data reservasi ke tabel reservations
     const { data: reservationData, error: reservationError } = await supabase
@@ -340,6 +348,9 @@ onMounted(() => {
                 <option value="Passenger">Passenger</option>
                 <option value="Cargo">Cargo</option>
               </select>
+              <p v-if="!newReservation.vehicle_category" class="text-red-500 text-sm mt-1">
+                Vehicle Category is required.
+              </p>
             </div>
 
             <!-- Vehicle Dropdown -->
@@ -348,6 +359,7 @@ onMounted(() => {
               <select v-model="newReservation.vehicle_id" id="vehicle" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" required>
                 <option v-for="vehicle in filteredVehicles" :key="vehicle.id" :value="vehicle.id">{{ vehicle.name }}</option>
               </select>
+              
             </div>
 
             <!-- Inline Date Pickers -->
