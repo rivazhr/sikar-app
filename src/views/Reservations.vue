@@ -3,15 +3,6 @@ import { ref, onMounted, watch } from 'vue';
 import { supabase } from '../supabase';
 import * as XLSX from 'xlsx';
 
-// Method untuk load tabel ke Excel
-const exportTableToExcel = () => {
-  const table = document.getElementById("reservationsTable");
-  const ws = XLSX.utils.table_to_sheet(table);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Reservations');
-  XLSX.writeFile(wb, 'reservations.xlsx');
-};
-
 // State untuk menyimpan data reservasi dan error
 const reservations = ref([]);
 const approverList = ref([]);
@@ -23,9 +14,12 @@ const drivers = ref([]);
 
 // State untuk edit data
 const showDetailDialog = ref(false);
+const showSelectApproversDialog = ref(false);
+const showSelectDriverDialog = ref(false);
 const detailReservation = ref(null);
 const approverLevels = ref();
 const selectedApprovers = ref([]);  
+const selectedDriver = ref();  
 
 // State untuk track perubahan status form
 const showDialog = ref(false);
@@ -76,7 +70,8 @@ const fetchReservations = async () => {
       user:users!user_id(name),
       driver:users!driver_id(name),
       approvals(id, is_approved) 
-    `);
+    `)
+    .order('created_at');
 
   if (error) {
     console.error('Error fetching reservations data:', error.message);
@@ -100,12 +95,11 @@ const fetchUsersForApprovers = async () => {
 };
 
 // Ambil data driver yang sesuai dengan vehicle
-const fetchDriversForVehicle = async (vehicleId) => {
+const fetchUsersForDrivers = async () => {
   const { data, error } = await supabase
     .from('users')
     .select('id, name')
-    .eq('role_id', 3) 
-    .eq('company_id', vehicleId); 
+    .eq('role_id', 3); 
 
   if (error) {
     console.error('Error fetching drivers:', error.message);
@@ -165,6 +159,28 @@ const openDetailDialog = async (reservation) => {
   showDetailDialog.value = true;
 };
 
+
+// Handle open select approver dialog
+const openSelectApproverDialog = async (reservation) => {
+  detailReservation.value = { ...reservation };
+  selectedApprovers.value = []; 
+  isEditing.value = true;
+  
+  // Ambil data approver dan perbarui hasApprovers
+  await fetchApprovers(reservation.id);
+  hasApprovers.value = approverList.value.length > 0;
+  approverLevels.value = approverList.value.length;
+  showSelectApproversDialog.value = true;
+};
+
+// Handle open select approver dialog
+const openSelectDriverDialog = async (reservation) => {
+  detailReservation.value = { ...reservation };
+  isEditing.value = true;
+  
+  showSelectDriverDialog.value = true;
+};
+
 // Watch for changes in approverLevels to update selectedApprovers
 watch(approverLevels, (newVal) => {
   const diff = newVal - selectedApprovers.value.length;
@@ -216,7 +232,36 @@ const saveEditedReservation = async () => {
 
     // Refresh data and close dialog
     await fetchReservations();
+    showSelectApproversDialog.value = false;
     showDetailDialog.value = false;
+  } catch (error) {
+    console.error('Error saving edited reservation:', error);
+  }
+};
+
+// Save the updated driver
+const saveDriver = async () => {
+  if (!detailReservation.value) return;
+
+  // Validasi untuk memastikan bahwa semua approvers yang dipilih tidak kosong
+  if (!selectedDriver.value) {
+    alert("Please select driver.");
+    return; 
+  }
+
+  try {
+    // Update driver
+    await supabase
+      .from('reservations')
+      .update({
+        driver_id: selectedDriver.value
+      })
+      .eq('id', detailReservation.value.id)
+
+    // Refresh data and close dialog
+    await fetchReservations();
+    showSelectDriverDialog.value = false;
+    selectedDriver.value = null;
   } catch (error) {
     console.error('Error saving edited reservation:', error);
   }
@@ -236,6 +281,26 @@ const deleteItem = async (reservationId) => {
   }
 };
 
+// Method untuk load tabel ke Excel
+const exportTableToExcel = () => {
+  // Transform data dari reservations ke format JSON untuk ekspor
+  const filteredData = reservations.value.map((item, index) => ({
+    No: index + 1,
+    "User Name": item.user?.name || 'N/A',
+    "Vehicle Name": item.vehicles?.name || 'N/A',
+    "Start Date": item.start_date,
+    "End Date": item.end_date,
+    Status: item.status,
+    Driver: item.driver?.name || 'N/A'
+  }));
+  const ws = XLSX.utils.json_to_sheet(filteredData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Reservations');
+
+  XLSX.writeFile(wb, 'reservations.xlsx');
+};
+
+
 // Watch untuk memonitor perubahan kategori kendaraan dan memperbarui filteredVehicles
 watch(() => newReservation.value.vehicle_category, filterVehicles);
 
@@ -244,6 +309,7 @@ onMounted(() => {
   fetchReservations();
   fetchVehicles();
   fetchUsersForApprovers();
+  fetchUsersForDrivers();
 });
 </script>
 
@@ -261,50 +327,51 @@ onMounted(() => {
       </button>
     </div>
 
-    <!-- Dialog Box -->
+    <!-- Add Dialog -->
     <div v-if="showDialog" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50">
-      <div class="bg-white rounded-lg shadow-lg p-6 w-4/5 sm:w-2/5 text-start">
+      <div class="bg-white rounded-lg shadow-lg p-6 w-4/5 min-h-fit h-3/4 sm:w-2/5 text-start text-black">
         <h2 class="text-xl font-bold mb-4 text-black text-center">Add Reservation</h2>
-        <form @submit.prevent="addReservation">
-          <!-- Vehicle Category Dropdown -->
-          <div class="mb-4">
-            <label for="vehicle_category" class="block text-sm font-medium text-gray-700">Vehicle Category<span class="text-error"> (*)</span></label>
-            <select v-model="newReservation.vehicle_category" id="vehicle_category" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" required>
-              <option value="Passenger">Passenger</option>
-              <option value="Cargo">Cargo</option>
-            </select>
-          </div>
-
-          <!-- Vehicle Dropdown -->
-          <div class="mb-4">
-            <label for="vehicle" class="block text-sm font-medium text-gray-700">Vehicle<span class="text-error"> (*)</span></label>
-            <select v-model="newReservation.vehicle_id" id="vehicle" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" required>
-              <option v-for="vehicle in filteredVehicles" :key="vehicle.id" :value="vehicle.id">{{ vehicle.name }}</option>
-            </select>
-          </div>
-
-          <!-- Inline Date Pickers -->
-          <div class="mb-4 flex space-x-4">
-            <div class="w-full">
-              <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date<span class="text-error"> (*)</span></label>
-              <input v-model="newReservation.start_date" id="start_date" type="date" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" required />
+        <div class="overflow-y-auto max-h-[70%] ps-5 pt-5 pe-5 mb-5 md:mb-0">
+          <form @submit.prevent="addReservation">
+            <!-- Vehicle Category Dropdown -->
+            <div class="mb-4">
+              <label for="vehicle_category" class="block text-sm font-medium text-gray-700">Vehicle Category<span class="text-error"> (*)</span></label>
+              <select v-model="newReservation.vehicle_category" id="vehicle_category" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" required>
+                <option value="Passenger">Passenger</option>
+                <option value="Cargo">Cargo</option>
+              </select>
             </div>
-            <div class="w-full">
-              <label for="end_date" class="block text-sm font-medium text-gray-700">End Date<span class="text-error"> (*)</span></label>
-              <input v-model="newReservation.end_date" id="end_date" type="date" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" required />
-            </div>
-          </div>
-          <p class="text-error mb-3">(*) is required</p>
 
-          <div class="flex justify-end">
-            <button type="button" @click="showDialog = false" class="mr-2 text-gray-500 bg-gray-200 hover:bg-gray-300">
-              Cancel
-            </button>
-            <button type="submit" class="bg-primary text-white py-2 px-4 rounded opacity-90 hover:opacity-100">
-              Save
-            </button>
-          </div>
-        </form>
+            <!-- Vehicle Dropdown -->
+            <div class="mb-4">
+              <label for="vehicle" class="block text-sm font-medium text-gray-700">Vehicle<span class="text-error"> (*)</span></label>
+              <select v-model="newReservation.vehicle_id" id="vehicle" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" required>
+                <option v-for="vehicle in filteredVehicles" :key="vehicle.id" :value="vehicle.id">{{ vehicle.name }}</option>
+              </select>
+            </div>
+
+            <!-- Inline Date Pickers -->
+            <div class="mb-4 md:flex md:space-x-4">
+              <div class="w-full md:mb-0 mb-4">
+                <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date<span class="text-error"> (*)</span></label>
+                <input v-model="newReservation.start_date" id="start_date" type="date" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" required />
+              </div>
+              <div class="w-full">
+                <label for="end_date" class="block text-sm font-medium text-gray-700">End Date<span class="text-error"> (*)</span></label>
+                <input v-model="newReservation.end_date" id="end_date" type="date" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" required />
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="text-error mb-3 ps-5">(*) is required</div>
+        <div class="flex justify-end">
+          <button type="button" @click="showDialog = false" class="mr-2 text-gray-500 bg-gray-200 hover:bg-gray-300">
+            Cancel
+          </button>
+          <button type="submit" @click="addReservation" class="bg-primary text-white py-2 px-4 rounded opacity-90 hover:opacity-100">
+            Save
+          </button>
+        </div>
       </div>
     </div>
 
@@ -327,18 +394,25 @@ onMounted(() => {
             <p class="mt-1 p-2 w-full bg-gray-100 text-black border-gray-300 rounded-md">{{ detailReservation?.vehicles?.name || 'N/A' }}</p>
           </div>
 
-          <!-- Start Date -->
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700">Start Date</label>
-            <input v-if="isEditing" v-model="detailReservation.start_date" type="date" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" />
-            <p v-else class="mt-1 p-2 w-full bg-gray-100 text-black border-gray-300 rounded-md">{{ detailReservation?.start_date }}</p>
+          <div class="mb-4 flex">
+            <div class="w-full me-3">
+              <!-- Start Date -->
+              <label class="block text-sm font-medium text-gray-700">Start Date</label>
+              <input v-if="isEditing" v-model="detailReservation.start_date" type="date" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" />
+              <p v-else class="mt-1 p-2 w-full bg-gray-100 text-black border-gray-300 rounded-md">{{ detailReservation?.start_date }}</p>
+            </div>
+            <!-- End Date -->
+            <div class="w-full">
+              <label class="block text-sm font-medium text-gray-700">End Date</label>
+              <input v-if="isEditing" v-model="detailReservation.end_date" type="date" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" />
+              <p v-else class="mt-1 p-2 w-full bg-gray-100 text-black border-gray-300 rounded-md">{{ detailReservation?.end_date }}</p>
+            </div>
           </div>
 
-          <!-- End Date -->
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700">End Date</label>
-            <input v-if="isEditing" v-model="detailReservation.end_date" type="date" class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" />
-            <p v-else class="mt-1 p-2 w-full bg-gray-100 text-black border-gray-300 rounded-md">{{ detailReservation?.end_date }}</p>
+          <!-- Driver -->
+          <div class="mb-4" v-if="detailReservation.driver">
+            <label class="block text-sm font-medium text-gray-700">Driver</label>
+            <p class="mt-1 p-2 w-full bg-gray-100 text-black border-gray-300 rounded-md">{{ detailReservation?.driver.name }}</p>
           </div>
           
           <!-- Approver Levels -->
@@ -397,6 +471,84 @@ onMounted(() => {
       </div>
     </div>
 
+    <!-- Select Approvers Dialog -->
+    <div v-if="showSelectApproversDialog" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50">
+      <div class="bg-white min-h-fit max-h-[70%] rounded-lg shadow-lg p-6 w-4/5 sm:w-2/5 text-start text-black flex flex-col">
+        <!-- Title -->
+        <h2 class="text-xl font-bold mb-4 text-black text-center">Select Approvers</h2>
+        
+        <!-- Scrollable Content -->
+        <div class="flex-grow overflow-y-auto p-5">
+          <!-- Approver Levels -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">Number of Approver Levels</label>
+            <input 
+              v-if="isEditing" 
+              v-model.number="approverLevels" 
+              type="number" 
+              min="2" 
+              max="5"
+              class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md" 
+            />
+            <p v-else class="mt-1 p-2 w-full bg-gray-100 text-black border-gray-300 rounded-md">{{ approverLevels }}</p>
+          </div>
+          
+          <!-- Approvers -->
+          <div v-for="(level, index) in approverLevels" :key="'approver-level-' + index" class="mb-4">
+            <label :for="'approver-' + (index + 1)" class="text-sm font-medium text-gray-700">
+              Approver {{ level }}
+            </label>
+            <select
+              v-model="selectedApprovers[index]"
+              :id="'approver-' + (index + 1)"
+              class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md"
+              required
+            >
+              <option :value="null">Select Approver</option>
+              <option v-for="approver in approvers" :key="approver.id" :value="approver.id">
+                {{ approver.name }}
+              </option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="flex justify-end mt-4">
+          <button v-if="isEditing" @click="saveEditedReservation" class="bg-green-600 hover:bg-green-800 text-white me-2 py-2 px-4 rounded">Save</button>
+          <button @click="showSelectApproversDialog = false" class="bg-gray-200 hover:bg-gray-300 text-gray-500 py-2 px-4 rounded">Close</button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Select Driver Dialog -->
+    <div v-if="showSelectDriverDialog" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50">
+      <div class="bg-white min-h-fit rounded-lg shadow-lg p-6 w-4/5 sm:w-2/5 text-start text-black">
+        <h2 class="text-xl font-bold mb-4 text-black text-center">Select Driver</h2>
+  
+        <div class="flex-grow overflow-y-auto p-5">
+          <!-- Drivers -->
+          <label :for="'driver'" class="text-sm font-medium text-gray-700">Driver</label>
+          <select
+            v-model="selectedDriver"
+            :id="'approver-' + (index + 1)"
+            class="mt-1 p-2 w-full border bg-gray-100 text-black border-gray-300 rounded-md"
+          required>
+            <option :value="null">Select Driver</option>
+            <option v-for="driver in drivers" :key="driver.id" :value="driver.id">
+              {{ driver.name }}
+            </option>
+          </select>
+        </div>
+        
+        <!-- Actions -->
+        <div class="flex justify-end mt-4">
+          <button v-if="isEditing" @click="saveDriver" class="bg-green-600 hover:bg-green-800 text-white me-2 py-2 px-4 rounded">Save</button>
+          <button @click="showSelectDriverDialog = false" class="bg-gray-200 hover:bg-gray-300 text-gray-500 py-2 px-4 rounded">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Tabel reservasi -->
     <div class="w-full overflow-x-auto flex-grow rounded-lg" v-if="reservations">
       <div class="shadow-lg flex rounded-lg bg-white">
@@ -436,11 +588,12 @@ onMounted(() => {
               <td class="px-4 py-2 text-sm bg-green-500 text-white" v-if="item.status === 'Approved'">{{ item.status }}</td>
               <td class="px-4 py-2 text-sm bg-error100 text-error" v-else-if="item.status === 'Declined'">{{ item.status }}</td>
               <td class="px-4 py-2 text-sm bg-gray-200 text-black" v-else-if="item.status === 'Waiting for Approvals'">{{ item.status }}</td>
+              <td @click="openSelectApproverDialog(item)" class="cursor-pointer px-4 py-2 text-sm bg-blue-200 text-black" v-else-if="item.status === 'Select Approvers'">{{ item.status }}</td>
               <td class="px-4 py-2 text-sm bg-blue-200 text-black" v-else>{{ item.status }}</td>
               
               <!-- Driver -->
-              <td v-if="item.driver" class="px-4 py-2 text-sm text-gray-700">{{ item.driver.name }}</td>
-              <td v-else-if="item.status === 'Approved'" class="px-4 py-2 text-sm bg-blue-200 text-black">Select Driver</td>
+              <td v-if="item.driver" class="px-4 py-2 text-sm text-black bg-green-100">{{ item.driver.name }}</td>
+              <td v-else-if="item.status === 'Approved'" @click="openSelectDriverDialog(item)" class="cursor-pointer px-4 py-2 text-sm bg-blue-200 text-black">Select Driver</td>
               <td v-else class="px-4 py-2 text-sm text-gray-700">Not Assigned</td>
 
               <!-- Actions -->
