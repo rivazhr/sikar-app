@@ -13,15 +13,17 @@
         <Card label="Reserved Vehicles" :percentage="Number(vehiclePercentage.toFixed(2))" :value="String(newVehicleCount)"></Card>
       </div>
       <div class="sm:col-span-2 mb-4 lg:mb-0 h-fit w-full text-start bg-white shadow-sm rounded-lg p-5 overflow-auto">
-        <h2 class="text-gray-600">Reservations each Month</h2>
-        <canvas id="reservationsByMonth" class="w-fit sm:p-10"></canvas>
+        <h2 class="text-black font-bold">Reservations each Month</h2>
+        <canvas id="reservationsByMonth" class="w-fit md:p-5"></canvas>
       </div>
-      <div class="h-fit w-full mb-4 lg:mb-0 text-start bg-white shadow-sm rounded-lg p-5 overflow-auto">
-        <h2 class="text-gray-600">Vehicles Composition</h2>
-        <canvas id="vehicleComposition" class="w-fit p-10"></canvas>
+      <div class="w-full h-full mb-4 lg:mb-0 text-start bg-white shadow-sm rounded-lg p-5 flex flex-col">
+        <h2 class="text-black font-bold">Vehicles Composition</h2>
+        <div class="flex flex-grow items-center">
+          <canvas id="vehicleComposition" class="w-full h-full p-5"></canvas>
+        </div>
       </div>
-      <div class="sm:col-span-2 h-fit w-full text-start bg-white shadow-sm rounded-lg p-5">
-        <h2 class="text-gray-600">Reservation Details</h2>
+      <div class="sm:col-span-2 h-fit mb-4 lg:mb-0 w-full text-start bg-white shadow-sm rounded-lg p-5 order-2 lg:order-1">
+        <h2 class="text-black font-bold">Reservation Details</h2>
         <div class="flex overflow-auto">
           <table id="resTable" class="w-full display text-black text-center">
             <thead>
@@ -48,9 +50,19 @@
               </tr>
             </tbody>
           </table>
-
         </div>
-
+      </div>
+      <div class="w-full h-fit p-5 text-start bg-white shadow-sm rounded-lg mb-4 md:mb-0 order-1 lg:order-2">
+        <h2 class="text-black font-bold mb-4">Top Reserved Vehicles</h2>
+        <ul>
+          <li v-for="vehicle, index in topVehicles" :key="vehicle.name" class="flex justify-start">
+            <span class="text-black w-fit me-4 font-extrabold">{{ index + 1 }}</span>
+            <span class="flex flex-grow justify-between">
+              <span class="text-black">{{ vehicle.name }}</span>
+              <span class="text-black">{{ vehicle.count }}</span>
+            </span>
+          </li>
+        </ul>
       </div>
     </div>
   </div>
@@ -226,14 +238,15 @@ async function fetchData() {
 
   // Process reservations and vehicles data
   const vehicleUsageCount = reservations.reduce((counts, row) => {
-    counts[row.vehicle_id] = (counts[row.vehicle_id] || 0) + 1;
+    const vehicleName = row.vehicles?.name || "Unknown Vehicle";
+    counts[vehicleName] = (counts[vehicleName] || 0) + 1;
     return counts;
   }, {});
 
   topVehicles.value = Object.entries(vehicleUsageCount)
-    .sort((a, b) => b[1] - a[1])
+    .sort(([, countA], [, countB]) => countB - countA)
     .slice(0, 5)
-    .map(([vehicleId, count]) => ({ vehicleId, count }));
+    .map(([name, count]) => ({ name, count }));
 
   companyCounts.value = vehicles.reduce((counts, vehicle) => {
     if (vehicle.company_id === 1) {
@@ -276,7 +289,7 @@ async function fetchData() {
             stepSize: 1 
           }
         }
-      }
+      },
     }
   });
 
@@ -297,7 +310,7 @@ async function fetchData() {
       }]
     },
     options: {
-      responsive: true
+      responsive: true,
     }
   });
 

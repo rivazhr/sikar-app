@@ -10,7 +10,7 @@ defineProps({
   <div class="flex flex-col w-full h-full">
     <div class="flex items-center my-auto">
       <span class="text-start flex-grow">
-        <p class="text-gray-600 mb-3">Total {{ label }}</p>
+        <p class="text-black font-bold mb-3">Total {{ label }}</p>
         <p class="text-black text-2xl font-bold">{{ value }}</p>
       </span>
       <span>
